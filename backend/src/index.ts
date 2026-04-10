@@ -1,6 +1,22 @@
 import { Elysia } from "elysia";
-const app = new Elysia().get("/", () => "Hello Elysia").listen(3000);
+import { cron, Patterns } from "@elysiajs/cron";
+import { cors } from "@elysiajs/cors";
+import { populationRoutes } from "./modules/population";
+import { PopulationService } from "./modules/population/service";
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
-);
+const app = new Elysia()
+  .use(cors())
+  .use(
+    cron({
+      name: "minute-observer",
+      pattern: "* * * * *", // <--- This triggers every minute
+      async run() {
+        console.log(
+          `[${new Date().toLocaleTimeString()}] Automated minute sync starting...`,
+        );
+        await PopulationService.ingestDailyData();
+      },
+    }),
+  )
+  .use(populationRoutes)
+  .listen(3001);
